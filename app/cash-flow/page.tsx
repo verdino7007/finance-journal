@@ -8,6 +8,43 @@ import { getAccounts, getJournals, initializeApp, getCompanies, getSettings } fr
 import { formatCurrency, getCurrentYearPeriod } from '@/lib/accounting';
 import * as XLSX from 'xlsx';
 
+const CashSection = ({ title, items, total, color }: {
+  title: string; items: { label: string; amount: number }[]; total: number; color: string;
+}) => (
+  <div style={{ marginBottom: 20 }}>
+    <div style={{
+      padding: '10px 14px', fontWeight: 700, fontSize: '0.8rem',
+      textTransform: 'uppercase', letterSpacing: '0.07em',
+      color, background: `${color}12`, borderLeft: `4px solid ${color}`,
+    }}>
+      {title}
+    </div>
+    {items.length === 0 ? (
+      <div style={{ padding: '12px 14px', color: 'var(--color-gray-400)', fontSize: '0.85rem' }}>
+        Tidak ada transaksi
+      </div>
+    ) : items.map((item, i) => (
+      <tr key={i}>
+        <td style={{ paddingLeft: 28, fontSize: '0.875rem' }}>{item.label}</td>
+        <td className={`td-amount ${item.amount >= 0 ? 'td-positive' : 'td-negative'}`}>
+          {formatCurrency(item.amount)}
+        </td>
+      </tr>
+    ))}
+    <tr style={{ background: 'var(--color-gray-50)' }}>
+      <td style={{ paddingLeft: 14, fontWeight: 700, fontSize: '0.875rem' }}>
+        Net {title.split(' ').slice(-2).join(' ')}
+      </td>
+      <td className="td-amount" style={{
+        fontWeight: 700,
+        color: total >= 0 ? 'var(--color-success)' : 'var(--color-danger)',
+      }}>
+        {formatCurrency(total)}
+      </td>
+    </tr>
+  </div>
+);
+
 // Simple cash flow: direct method via cash accounts
 export default function CashFlowPage() {
   const [mounted, setMounted] = useState(false);
@@ -168,43 +205,6 @@ export default function CashFlowPage() {
   }
 
   if (!mounted) return null;
-
-  const CashSection = ({ title, items, total, color }: {
-    title: string; items: { label: string; amount: number }[]; total: number; color: string;
-  }) => (
-    <div style={{ marginBottom: 20 }}>
-      <div style={{
-        padding: '10px 14px', fontWeight: 700, fontSize: '0.8rem',
-        textTransform: 'uppercase', letterSpacing: '0.07em',
-        color, background: `${color}12`, borderLeft: `4px solid ${color}`,
-      }}>
-        {title}
-      </div>
-      {items.length === 0 ? (
-        <div style={{ padding: '12px 14px', color: 'var(--color-gray-400)', fontSize: '0.85rem' }}>
-          Tidak ada transaksi
-        </div>
-      ) : items.map((item, i) => (
-        <tr key={i}>
-          <td style={{ paddingLeft: 28, fontSize: '0.875rem' }}>{item.label}</td>
-          <td className={`td-amount ${item.amount >= 0 ? 'td-positive' : 'td-negative'}`}>
-            {formatCurrency(item.amount)}
-          </td>
-        </tr>
-      ))}
-      <tr style={{ background: 'var(--color-gray-50)' }}>
-        <td style={{ paddingLeft: 14, fontWeight: 700, fontSize: '0.875rem' }}>
-          Net {title.split(' ').slice(-2).join(' ')}
-        </td>
-        <td className="td-amount" style={{
-          fontWeight: 700,
-          color: total >= 0 ? 'var(--color-success)' : 'var(--color-danger)',
-        }}>
-          {formatCurrency(total)}
-        </td>
-      </tr>
-    </div>
-  );
 
   return (
     <div className="app-layout">

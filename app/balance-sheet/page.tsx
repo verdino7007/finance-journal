@@ -9,6 +9,36 @@ import { generateBalanceSheet, formatCurrency, getCurrentYearPeriod } from '@/li
 import { BalanceSheetData } from '@/lib/types';
 import * as XLSX from 'xlsx';
 
+const Section = ({ title, rows, total, totalLabel, color }:
+  { title: string; rows: { account: any; amount: number }[]; total: number; totalLabel: string; color: string }) => (
+  <>
+    <tr>
+      <td colSpan={2} style={{
+        padding: '8px 14px',
+        fontWeight: 700,
+        fontSize: '0.78rem',
+        textTransform: 'uppercase',
+        letterSpacing: '0.07em',
+        color,
+        background: `${color}12`,
+        borderLeft: `4px solid ${color}`,
+      }}>
+        {title}
+      </td>
+    </tr>
+    {rows.map(r => (
+      <tr key={r.account.id}>
+        <td style={{ paddingLeft: 32, fontSize: '0.875rem' }}>{r.account.name}</td>
+        <td className="td-amount">{r.amount !== 0 ? formatCurrency(r.amount) : '—'}</td>
+      </tr>
+    ))}
+    <tr style={{ background: 'var(--color-gray-50)' }}>
+      <td style={{ paddingLeft: 14, fontWeight: 700 }}>{totalLabel}</td>
+      <td className="td-amount" style={{ fontWeight: 700, color }}>{formatCurrency(total)}</td>
+    </tr>
+  </>
+);
+
 export default function BalanceSheetPage() {
   const [mounted, setMounted] = useState(false);
   const [data, setData] = useState<BalanceSheetData | null>(null);
@@ -64,34 +94,6 @@ export default function BalanceSheetPage() {
   }
 
   if (!mounted || !data) return null;
-
-  const Section = ({ title, rows, total, totalLabel, color }:
-    { title: string; rows: { account: any; amount: number }[]; total: number; totalLabel: string; color: string }) => (
-    <div>
-      <div style={{
-        padding: '8px 14px',
-        fontWeight: 700,
-        fontSize: '0.78rem',
-        textTransform: 'uppercase',
-        letterSpacing: '0.07em',
-        color,
-        background: `${color}12`,
-        borderLeft: `4px solid ${color}`,
-      }}>
-        {title}
-      </div>
-      {rows.map(r => (
-        <tr key={r.account.id}>
-          <td style={{ paddingLeft: 32, fontSize: '0.875rem' }}>{r.account.name}</td>
-          <td className="td-amount">{r.amount !== 0 ? formatCurrency(r.amount) : '—'}</td>
-        </tr>
-      ))}
-      <tr style={{ background: 'var(--color-gray-50)' }}>
-        <td style={{ paddingLeft: 14, fontWeight: 700 }}>{totalLabel}</td>
-        <td className="td-amount" style={{ fontWeight: 700, color }}>{formatCurrency(total)}</td>
-      </tr>
-    </div>
-  );
 
   return (
     <div className="app-layout">

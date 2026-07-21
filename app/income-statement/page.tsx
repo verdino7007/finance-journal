@@ -9,6 +9,44 @@ import { generateIncomeStatement, formatCurrency, getCurrentYearPeriod } from '@
 import { IncomeStatementData } from '@/lib/types';
 import * as XLSX from 'xlsx';
 
+const Row = ({ label, amount, indent = false, bold = false, total = false, grand = false }:
+  { label: string; amount: number; indent?: boolean; bold?: boolean; total?: boolean; grand?: boolean }) => (
+  <tr className={grand ? 'report-grand-total' : total ? 'report-total-row' : undefined}>
+    <td style={{
+      paddingLeft: indent ? 32 : 14,
+      fontWeight: bold || total || grand ? 700 : 400,
+      fontSize: grand ? '1rem' : '0.875rem',
+    }}>
+      {label}
+    </td>
+    <td className="td-amount" style={{
+      fontWeight: bold || total || grand ? 700 : 400,
+      color: grand ? (amount >= 0 ? 'var(--color-success)' : 'var(--color-danger)') :
+        total ? 'var(--color-gray-900)' : 'var(--color-gray-700)',
+      fontSize: grand ? '1rem' : '0.875rem',
+    }}>
+      {amount !== 0 ? formatCurrency(amount) : '—'}
+    </td>
+  </tr>
+);
+
+const SectionHeader = ({ title, color }: { title: string; color?: string }) => (
+  <tr>
+    <td colSpan={2} style={{
+      padding: '10px 14px',
+      fontWeight: 700,
+      fontSize: '0.78rem',
+      textTransform: 'uppercase',
+      letterSpacing: '0.08em',
+      color: color || 'var(--color-primary)',
+      background: color ? `${color}10` : 'var(--color-primary-50)',
+      borderLeft: `4px solid ${color || 'var(--color-primary)'}`,
+    }}>
+      {title}
+    </td>
+  </tr>
+);
+
 export default function IncomeStatementPage() {
   const [mounted, setMounted] = useState(false);
   const [data, setData] = useState<IncomeStatementData | null>(null);
@@ -72,44 +110,6 @@ export default function IncomeStatementPage() {
   }
 
   if (!mounted || !data) return null;
-
-  const Row = ({ label, amount, indent = false, bold = false, total = false, grand = false }:
-    { label: string; amount: number; indent?: boolean; bold?: boolean; total?: boolean; grand?: boolean }) => (
-    <tr className={grand ? 'report-grand-total' : total ? 'report-total-row' : undefined}>
-      <td style={{
-        paddingLeft: indent ? 32 : 14,
-        fontWeight: bold || total || grand ? 700 : 400,
-        fontSize: grand ? '1rem' : '0.875rem',
-      }}>
-        {label}
-      </td>
-      <td className="td-amount" style={{
-        fontWeight: bold || total || grand ? 700 : 400,
-        color: grand ? (amount >= 0 ? 'var(--color-success)' : 'var(--color-danger)') :
-          total ? 'var(--color-gray-900)' : 'var(--color-gray-700)',
-        fontSize: grand ? '1rem' : '0.875rem',
-      }}>
-        {amount !== 0 ? formatCurrency(amount) : '—'}
-      </td>
-    </tr>
-  );
-
-  const SectionHeader = ({ title, color }: { title: string; color?: string }) => (
-    <tr>
-      <td colSpan={2} style={{
-        padding: '10px 14px',
-        fontWeight: 700,
-        fontSize: '0.78rem',
-        textTransform: 'uppercase',
-        letterSpacing: '0.08em',
-        color: color || 'var(--color-primary)',
-        background: color ? `${color}10` : 'var(--color-primary-50)',
-        borderLeft: `4px solid ${color || 'var(--color-primary)'}`,
-      }}>
-        {title}
-      </td>
-    </tr>
-  );
 
   return (
     <div className="app-layout">
