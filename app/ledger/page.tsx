@@ -3,11 +3,12 @@
 import { useEffect, useState } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
-import { Download, Search, ChevronDown, ChevronRight } from 'lucide-react';
+import { Download, Search, ChevronDown, ChevronRight, Printer } from 'lucide-react';
 import { getAccounts, getJournals, initializeApp, getCompanies, getSettings } from '@/lib/storage';
 import { generateLedger, formatCurrency, formatDate, getCurrentYearPeriod } from '@/lib/accounting';
 import { LedgerAccount } from '@/lib/types';
 import * as XLSX from 'xlsx';
+import { exportToPDF, ExportColumn } from '@/lib/export';
 
 export default function LedgerPage() {
   const [mounted, setMounted] = useState(false);
@@ -117,6 +118,59 @@ export default function LedgerPage() {
     XLSX.writeFile(wb, 'buku_besar.xlsx');
   }
 
+  function exportPDF() {
+    const columns: ExportColumn[] = [
+      { header: 'Tanggal', dataKey: 'date' },
+      { header: 'Referensi', dataKey: 'ref' },
+      { header: 'Keterangan', dataKey: 'desc' },
+      { header: 'Debit', dataKey: 'debit' },
+      { header: 'Kredit', dataKey: 'credit' },
+      { header: 'Saldo', dataKey: 'balance' },
+    ];
+
+    const pdfData: any[] = [];
+    
+    filtered.forEach(ledgerAcc => {
+      // Account Header
+      pdfData.push({ date: `[${ledgerAcc.account.code}] ${ledgerAcc.account.name}`, ref: '', desc: '', debit: '', credit: '', balance: '', isTotal: true });
+      // Opening Balance
+      pdfData.push({ date: '', ref: '', desc: 'SALDO AWAL', debit: '', credit: '', balance: formatCurrency(ledgerAcc.openingBalance) });
+      
+      // Entries
+      ledgerAcc.entries.forEach(e => {
+        pdfData.push({
+          date: formatDate(e.date),
+          ref: e.reference,
+          desc: e.description,
+          debit: e.debit ? formatCurrency(e.debit) : '',
+          credit: e.credit ? formatCurrency(e.credit) : '',
+          balance: formatCurrency(e.balance)
+        });
+      });
+
+      // Closing Balance
+      pdfData.push({
+        date: '',
+        ref: '',
+        desc: 'SALDO AKHIR',
+        debit: formatCurrency(ledgerAcc.totalDebit),
+        credit: formatCurrency(ledgerAcc.totalCredit),
+        balance: formatCurrency(ledgerAcc.closingBalance),
+        isTotal: true
+      });
+      pdfData.push({ date: '', ref: '', desc: '', debit: '', credit: '', balance: '' }); // spacer
+    });
+
+    exportToPDF(
+      'BUKU BESAR',
+      columns,
+      pdfData,
+      company,
+      `Periode: ${dateFrom} s/d ${dateTo}`,
+      'Laporan_Buku_Besar'
+    );
+  }
+
   if (!mounted) return null;
 
   return (
@@ -133,6 +187,9 @@ export default function LedgerPage() {
             <div className="page-header-actions">
               <button className="btn btn-ghost btn-sm" onClick={collapseAll}>Tutup Semua</button>
               <button className="btn btn-ghost btn-sm" onClick={expandAll}>Buka Semua</button>
+              <button className="btn btn-secondary" onClick={exportPDF}>
+                <Printer size={15} /> Cetak PDF
+              </button>
               <button className="btn btn-secondary" onClick={exportExcel}>
                 <Download size={15} /> Export Excel
               </button>

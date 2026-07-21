@@ -7,6 +7,7 @@ import { Download, Printer, Info } from 'lucide-react';
 import { getAccounts, getJournals, initializeApp, getCompanies, getSettings } from '@/lib/storage';
 import { formatCurrency, getCurrentYearPeriod } from '@/lib/accounting';
 import * as XLSX from 'xlsx';
+import { exportToPDF, ExportColumn } from '@/lib/export';
 
 const CashSection = ({ title, items, total, color }: {
   title: string; items: { label: string; amount: number }[]; total: number; color: string;
@@ -201,7 +202,47 @@ export default function CashFlowPage() {
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Arus Kas');
+    XLSX.utils.book_append_sheet(wb, ws, 'Arus Kas');
     XLSX.writeFile(wb, 'laporan_arus_kas.xlsx');
+  }
+
+  function exportPDF() {
+    const columns: ExportColumn[] = [
+      { header: 'Keterangan', dataKey: 'label' },
+      { header: 'Jumlah (Rp)', dataKey: 'amount' },
+    ];
+
+    const pdfData: any[] = [];
+    
+    const addSection = (title: string, items: any[], totalLabel: string, total: number) => {
+      pdfData.push({ label: title, amount: '', isTotal: true });
+      if (items.length === 0) {
+        pdfData.push({ label: '    Tidak ada transaksi', amount: '' });
+      } else {
+        items.forEach(item => {
+          pdfData.push({ label: `    ${item.label}`, amount: formatCurrency(item.amount) });
+        });
+      }
+      pdfData.push({ label: totalLabel, amount: formatCurrency(total), isTotal: true });
+      pdfData.push({ label: '', amount: '' });
+    };
+
+    addSection('ARUS KAS DARI AKTIVITAS OPERASI', cashFlow.operating, 'Net Arus Operasi', cashFlow.netOperating);
+    addSection('ARUS KAS DARI AKTIVITAS INVESTASI', cashFlow.investing, 'Net Arus Investasi', cashFlow.netInvesting);
+    addSection('ARUS KAS DARI AKTIVITAS PENDANAAN', cashFlow.financing, 'Net Arus Pendanaan', cashFlow.netFinancing);
+
+    pdfData.push({ label: 'Kas Awal', amount: formatCurrency(cashFlow.openingCash), isTotal: true });
+    pdfData.push({ label: 'KENAIKAN (PENURUNAN) KAS', amount: formatCurrency(cashFlow.netChange), isGrandTotal: true });
+    pdfData.push({ label: 'KAS AKHIR', amount: formatCurrency(cashFlow.closingCash), isGrandTotal: true });
+
+    exportToPDF(
+      'LAPORAN ARUS KAS',
+      columns,
+      pdfData,
+      company,
+      `Periode: ${dateFrom} s/d ${dateTo}`,
+      'Laporan_Arus_Kas'
+    );
   }
 
   if (!mounted) return null;
@@ -218,8 +259,8 @@ export default function CashFlowPage() {
               <p>Pergerakan kas & setara kas perusahaan</p>
             </div>
             <div className="page-header-actions">
-              <button className="btn btn-secondary no-print" onClick={() => window.print()}>
-                <Printer size={15} /> Cetak
+              <button className="btn btn-secondary no-print" onClick={exportPDF}>
+                <Printer size={15} /> Cetak PDF
               </button>
               <button className="btn btn-secondary no-print" onClick={exportExcel}>
                 <Download size={15} /> Export Excel

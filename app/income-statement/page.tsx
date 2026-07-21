@@ -8,6 +8,7 @@ import { getAccounts, getJournals, initializeApp, getCompanies, getSettings } fr
 import { generateIncomeStatement, formatCurrency, getCurrentYearPeriod } from '@/lib/accounting';
 import { IncomeStatementData } from '@/lib/types';
 import * as XLSX from 'xlsx';
+import { exportToPDF, ExportColumn } from '@/lib/export';
 
 const Row = ({ label, amount, indent = false, bold = false, total = false, grand = false }:
   { label: string; amount: number; indent?: boolean; bold?: boolean; total?: boolean; grand?: boolean }) => (
@@ -109,6 +110,52 @@ export default function IncomeStatementPage() {
     XLSX.writeFile(wb, 'laporan_laba_rugi.xlsx');
   }
 
+  function exportPDF() {
+    if (!data) return;
+
+    const columns: ExportColumn[] = [
+      { header: 'Keterangan', dataKey: 'label' },
+      { header: 'Jumlah (Rp)', dataKey: 'amount' },
+    ];
+
+    const pdfData: any[] = [];
+    
+    // Helper to add section
+    const addSection = (title: string, items: any[], totalLabel: string, total: number) => {
+      pdfData.push({ label: title, amount: '', isTotal: true });
+      items.forEach(item => {
+        pdfData.push({ label: `    ${item.account.name}`, amount: formatCurrency(item.amount) });
+      });
+      pdfData.push({ label: totalLabel, amount: formatCurrency(total), isTotal: true });
+      pdfData.push({ label: '', amount: '' }); // spacer
+    };
+
+    addSection('PENDAPATAN OPERASIONAL', data.operatingRevenue, 'Total Pendapatan Operasional', data.totalOperatingRevenue);
+    addSection('HARGA POKOK PENJUALAN', data.cogs, 'Total HPP', data.totalCOGS);
+    pdfData.push({ label: 'LABA KOTOR', amount: formatCurrency(data.grossProfit), isGrandTotal: true });
+    pdfData.push({ label: '', amount: '' });
+    
+    addSection('BEBAN OPERASIONAL', data.operatingExpenses, 'Total Beban Operasional', data.totalOperatingExpenses);
+    pdfData.push({ label: 'LABA OPERASIONAL', amount: formatCurrency(data.operatingIncome), isGrandTotal: true });
+    pdfData.push({ label: '', amount: '' });
+
+    if (data.otherRevenue.length > 0 || data.otherExpenses.length > 0) {
+      addSection('PENDAPATAN LAIN-LAIN', data.otherRevenue, 'Total Pendapatan Lain', data.totalOtherRevenue);
+      addSection('BEBAN LAIN-LAIN', data.otherExpenses, 'Total Beban Lain', data.totalOtherExpenses);
+    }
+
+    pdfData.push({ label: 'LABA (RUGI) BERSIH', amount: formatCurrency(data.netIncome), isGrandTotal: true });
+
+    exportToPDF(
+      'LAPORAN LABA RUGI',
+      columns,
+      pdfData,
+      company,
+      `Periode: ${dateFrom} s/d ${dateTo}`,
+      'Laporan_Laba_Rugi'
+    );
+  }
+
   if (!mounted || !data) return null;
 
   return (
@@ -123,8 +170,8 @@ export default function IncomeStatementPage() {
               <p>Periode {dateFrom} s/d {dateTo}</p>
             </div>
             <div className="page-header-actions">
-              <button className="btn btn-secondary no-print" onClick={() => window.print()}>
-                <Printer size={15} /> Cetak
+              <button className="btn btn-secondary no-print" onClick={exportPDF}>
+                <Printer size={15} /> Cetak PDF
               </button>
               <button className="btn btn-secondary no-print" onClick={exportExcel}>
                 <Download size={15} /> Export Excel

@@ -5,7 +5,7 @@ import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
 import Modal from '@/components/ui/Modal';
 import {
-  Plus, Search, Edit2, Trash2, X, AlertCircle, Download, CheckCircle, PlusCircle, MinusCircle
+  Plus, Search, Edit2, Trash2, X, AlertCircle, Download, CheckCircle, PlusCircle, MinusCircle, Printer
 } from 'lucide-react';
 import {
   getAccounts, saveJournal, getJournals, deleteJournal, initializeApp, getCompanies, getSettings, generateId
@@ -13,6 +13,7 @@ import {
 import { Account, JournalEntry, JournalEntryLine } from '@/lib/types';
 import { formatCurrency, formatDate } from '@/lib/accounting';
 import * as XLSX from 'xlsx';
+import { exportToPDF, ExportColumn } from '@/lib/export';
 
 interface JournalLineForm {
   id: string;
@@ -207,6 +208,55 @@ export default function JournalPage() {
     XLSX.writeFile(wb, 'jurnal_umum.xlsx');
   }
 
+  function exportPDF() {
+    const columns: ExportColumn[] = [
+      { header: 'Tanggal', dataKey: 'date' },
+      { header: 'Referensi & Keterangan', dataKey: 'desc' },
+      { header: 'Akun', dataKey: 'account' },
+      { header: 'Debit', dataKey: 'debit' },
+      { header: 'Kredit', dataKey: 'credit' },
+    ];
+
+    const pdfData: any[] = [];
+    
+    let sumDebit = 0;
+    let sumCredit = 0;
+
+    filtered.forEach(j => {
+      j.lines.forEach((l, idx) => {
+        pdfData.push({
+          date: idx === 0 ? formatDate(j.date) : '',
+          desc: idx === 0 ? `[${j.reference}]\n${j.description}` : l.description,
+          account: `[${l.accountCode}] ${l.accountName}`,
+          debit: l.debit ? formatCurrency(l.debit) : '',
+          credit: l.credit ? formatCurrency(l.credit) : '',
+        });
+        sumDebit += l.debit || 0;
+        sumCredit += l.credit || 0;
+      });
+      // spacer between journals
+      pdfData.push({ date: '', desc: '', account: '', debit: '', credit: '' });
+    });
+
+    pdfData.push({
+      date: '',
+      desc: '',
+      account: 'TOTAL',
+      debit: formatCurrency(sumDebit),
+      credit: formatCurrency(sumCredit),
+      isGrandTotal: true
+    });
+
+    exportToPDF(
+      'JURNAL UMUM',
+      columns,
+      pdfData,
+      company,
+      `Periode: ${dateFrom || 'Semua'} s/d ${dateTo || 'Semua'}`,
+      'Laporan_Jurnal_Umum'
+    );
+  }
+
   if (!mounted) return null;
 
   return (
@@ -221,8 +271,11 @@ export default function JournalPage() {
               <p>{filtered.length} transaksi ditemukan</p>
             </div>
             <div className="page-header-actions">
+              <button className="btn btn-secondary" onClick={exportPDF}>
+                <Printer size={15} /> PDF
+              </button>
               <button className="btn btn-secondary" onClick={exportExcel}>
-                <Download size={15} /> Export Excel
+                <Download size={15} /> Excel
               </button>
               <button className="btn btn-primary" onClick={openAdd}>
                 <Plus size={16} /> Buat Jurnal

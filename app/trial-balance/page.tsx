@@ -8,6 +8,7 @@ import { getAccounts, getJournals, initializeApp, getCompanies, getSettings } fr
 import { generateTrialBalance, formatCurrency, getCurrentYearPeriod } from '@/lib/accounting';
 import { TrialBalanceRow } from '@/lib/types';
 import * as XLSX from 'xlsx';
+import { exportToPDF, ExportColumn } from '@/lib/export';
 
 const TYPE_LABELS: Record<string, string> = {
   ASSET: 'Aset', LIABILITY: 'Kewajiban', EQUITY: 'Ekuitas', REVENUE: 'Pendapatan', EXPENSE: 'Beban',
@@ -73,6 +74,55 @@ export default function TrialBalancePage() {
     XLSX.writeFile(wb, 'neraca_saldo.xlsx');
   }
 
+  function exportPDF() {
+    const columns: ExportColumn[] = [
+      { header: 'Kode Akun', dataKey: 'code' },
+      { header: 'Nama Akun', dataKey: 'name' },
+      { header: 'Debit (Rp)', dataKey: 'debit' },
+      { header: 'Kredit (Rp)', dataKey: 'credit' },
+    ];
+
+    const pdfData: any[] = [];
+    
+    // Group by type for PDF
+    const grouped: Record<string, TrialBalanceRow[]> = {};
+    rows.forEach(r => {
+      if (!grouped[r.account.type]) grouped[r.account.type] = [];
+      grouped[r.account.type].push(r);
+    });
+
+    ['ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE'].forEach(type => {
+      if (!grouped[type] || grouped[type].length === 0) return;
+      pdfData.push({ code: '', name: TYPE_LABELS[type].toUpperCase(), debit: '', credit: '', isTotal: true });
+      grouped[type].forEach(r => {
+        pdfData.push({
+          code: r.account.code,
+          name: `    ${r.account.name}`,
+          debit: r.debit > 0 ? formatCurrency(r.debit) : '',
+          credit: r.credit > 0 ? formatCurrency(r.credit) : '',
+        });
+      });
+      pdfData.push({ code: '', name: '', debit: '', credit: '' });
+    });
+
+    pdfData.push({
+      code: '',
+      name: 'TOTAL KESELURUHAN',
+      debit: formatCurrency(totalDebit),
+      credit: formatCurrency(totalCredit),
+      isGrandTotal: true
+    });
+
+    exportToPDF(
+      'NERACA SALDO (TRIAL BALANCE)',
+      columns,
+      pdfData,
+      company,
+      `Periode: ${dateFrom} s/d ${dateTo}`,
+      'Laporan_Neraca_Saldo'
+    );
+  }
+
   if (!mounted) return null;
 
   // Group by type
@@ -94,8 +144,8 @@ export default function TrialBalancePage() {
               <p>Rekap semua akun dengan total debit dan kredit</p>
             </div>
             <div className="page-header-actions">
-              <button className="btn btn-secondary no-print" onClick={() => window.print()}>
-                <Printer size={15} /> Cetak
+              <button className="btn btn-secondary no-print" onClick={exportPDF}>
+                <Printer size={15} /> Cetak PDF
               </button>
               <button className="btn btn-secondary no-print" onClick={exportExcel}>
                 <Download size={15} /> Export Excel

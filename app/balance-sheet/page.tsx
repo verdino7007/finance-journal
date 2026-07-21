@@ -8,6 +8,7 @@ import { getAccounts, getJournals, initializeApp, getCompanies, getSettings } fr
 import { generateBalanceSheet, formatCurrency, getCurrentYearPeriod } from '@/lib/accounting';
 import { BalanceSheetData } from '@/lib/types';
 import * as XLSX from 'xlsx';
+import { exportToPDF, ExportColumn } from '@/lib/export';
 
 const Section = ({ title, rows, total, totalLabel, color }:
   { title: string; rows: { account: any; amount: number }[]; total: number; totalLabel: string; color: string }) => (
@@ -93,6 +94,46 @@ export default function BalanceSheetPage() {
     XLSX.writeFile(wb, 'neraca.xlsx');
   }
 
+  function exportPDF() {
+    if (!data) return;
+
+    const columns: ExportColumn[] = [
+      { header: 'Keterangan', dataKey: 'label' },
+      { header: 'Jumlah (Rp)', dataKey: 'amount' },
+    ];
+
+    const pdfData: any[] = [];
+    
+    const addSection = (title: string, items: any[], totalLabel: string, total: number) => {
+      pdfData.push({ label: title, amount: '', isTotal: true });
+      items.forEach(item => {
+        pdfData.push({ label: `    ${item.account.name}`, amount: formatCurrency(item.amount) });
+      });
+      pdfData.push({ label: totalLabel, amount: formatCurrency(total), isTotal: true });
+      pdfData.push({ label: '', amount: '' });
+    };
+
+    pdfData.push({ label: 'ASET', amount: '', isGrandTotal: true });
+    addSection('Aset Lancar', data.currentAssets, 'Total Aset Lancar', data.totalCurrentAssets);
+    addSection('Aset Tetap', data.fixedAssets, 'Total Aset Tetap', data.totalFixedAssets);
+    pdfData.push({ label: 'TOTAL ASET', amount: formatCurrency(data.totalAssets), isGrandTotal: true });
+    pdfData.push({ label: '', amount: '' });
+
+    pdfData.push({ label: 'KEWAJIBAN & EKUITAS', amount: '', isGrandTotal: true });
+    addSection('Kewajiban Lancar', data.currentLiabilities, 'Total Kewajiban Lancar', data.totalCurrentLiabilities);
+    addSection('Ekuitas', data.equity, 'Total Ekuitas', data.totalEquity);
+    pdfData.push({ label: 'TOTAL KEWAJIBAN & EKUITAS', amount: formatCurrency(data.totalLiabilitiesAndEquity), isGrandTotal: true });
+
+    exportToPDF(
+      'NERACA (BALANCE SHEET)',
+      columns,
+      pdfData,
+      company,
+      `Per Tanggal: ${asOf}`,
+      'Laporan_Neraca'
+    );
+  }
+
   if (!mounted || !data) return null;
 
   return (
@@ -107,8 +148,8 @@ export default function BalanceSheetPage() {
               <p>Per tanggal {asOf}</p>
             </div>
             <div className="page-header-actions">
-              <button className="btn btn-secondary no-print" onClick={() => window.print()}>
-                <Printer size={15} /> Cetak
+              <button className="btn btn-secondary no-print" onClick={exportPDF}>
+                <Printer size={15} /> Cetak PDF
               </button>
               <button className="btn btn-secondary no-print" onClick={exportExcel}>
                 <Download size={15} /> Export Excel

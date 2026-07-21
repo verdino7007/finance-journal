@@ -237,6 +237,7 @@ export function generateBalanceSheet(
   endDate?: string
 ): BalanceSheetData {
   const trialBalance = generateTrialBalance(accounts, journals, undefined, endDate);
+  const incomeStatement = generateIncomeStatement(accounts, journals, undefined, endDate);
 
   const getAssetAmount = (row: TrialBalanceRow): number =>
     row.debit - row.credit;
@@ -267,6 +268,22 @@ export function generateBalanceSheet(
   const equity = trialBalance
     .filter(r => r.account.classification === 'EQUITY')
     .map(r => ({ account: r.account, amount: getLiabilityAmount(r) }));
+
+  // Add Current Year Earnings to Equity automatically
+  if (incomeStatement.netIncome !== 0) {
+    equity.push({
+      account: {
+        id: 'current-year-earnings',
+        code: '3-9999',
+        name: 'Laba (Rugi) Tahun Berjalan',
+        type: 'EQUITY',
+        classification: 'EQUITY',
+        isActive: true,
+        createdAt: new Date().toISOString(),
+      },
+      amount: incomeStatement.netIncome,
+    });
+  }
 
   const totalCurrentAssets = currentAssets.reduce((s, r) => s + r.amount, 0);
   const totalFixedAssets = fixedAssets.reduce((s, r) => s + r.amount, 0);

@@ -18,6 +18,7 @@ import {
 import { initializeApp, getJournals, getCompanies, getSettings, getAccounts } from '@/lib/storage';
 import { formatCurrency, getCurrentMonthPeriod, getCurrentYearPeriod, generateIncomeStatement } from '@/lib/accounting';
 import Link from 'next/link';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from 'recharts';
 
 export default function DashboardPage() {
   const [mounted, setMounted] = useState(false);
@@ -31,6 +32,7 @@ export default function DashboardPage() {
     companyName: 'PT. Perusahaan Saya',
     unbalanced: 0,
   });
+  const [chartData, setChartData] = useState<any[]>([]);
 
   useEffect(() => {
     initializeApp();
@@ -50,6 +52,21 @@ export default function DashboardPage() {
       .slice(0, 6);
 
     const unbalanced = journals.filter(j => !j.isBalanced).length;
+
+    // Generate Chart Data (Monthly for current year)
+    const monthlyData = [];
+    for (let i = 0; i < 12; i++) {
+      const mStart = `${new Date().getFullYear()}-${String(i + 1).padStart(2, '0')}-01`;
+      const mEnd = `${new Date().getFullYear()}-${String(i + 1).padStart(2, '0')}-31`;
+      const mIncome = generateIncomeStatement(accounts, journals, mStart, mEnd);
+      monthlyData.push({
+        month: new Date(2000, i, 1).toLocaleDateString('id-ID', { month: 'short' }),
+        Pendapatan: mIncome.totalRevenue,
+        Pengeluaran: mIncome.totalOperatingExpenses + mIncome.totalCOGS + mIncome.totalOtherExpenses,
+      });
+    }
+
+    setChartData(monthlyData);
 
     setStats({
       totalJournals: journals.length,
@@ -196,6 +213,33 @@ export default function DashboardPage() {
               </div>
               <div className="stat-value">{stats.totalAccounts}</div>
               <div className="stat-change">Akun aktif</div>
+            </div>
+          </div>
+
+          {/* Charts Section */}
+          <div className="card" style={{ marginBottom: 24 }}>
+            <div className="card-header">
+              <div>
+                <div className="card-title">Tren Keuangan {new Date().getFullYear()}</div>
+                <div className="card-subtitle">Perbandingan Pendapatan & Pengeluaran per Bulan</div>
+              </div>
+            </div>
+            <div className="card-body" style={{ height: 320, padding: '20px 20px 0' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} tickFormatter={(val) => `Rp ${val / 1000000}M`} />
+                  <RechartsTooltip
+                    cursor={{ fill: '#f3f4f6' }}
+                    formatter={(value: number) => [formatCurrency(value), '']}
+                    contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Legend wrapperStyle={{ paddingTop: 20, fontSize: 12 }} />
+                  <Bar dataKey="Pendapatan" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                  <Bar dataKey="Pengeluaran" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
 
