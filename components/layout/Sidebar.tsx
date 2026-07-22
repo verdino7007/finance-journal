@@ -14,6 +14,9 @@ import {
   Settings,
   LogOut,
   BookMarked,
+  Globe,
+  Heart,
+  QrCode,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -98,13 +101,42 @@ export default function Sidebar({ company = 'PT. Perusahaan Saya' }: SidebarProp
         ))}
       </nav>
 
-      <div className="sidebar-footer">
+      <div className="sidebar-footer" style={{ borderTop: '1px solid var(--border-color)', paddingTop: 16 }}>
         <div
           className="sidebar-item"
-          style={{ fontSize: '0.8rem', color: 'var(--color-gray-500)' }}
+          style={{ fontSize: '0.8rem', color: 'var(--color-gray-500)', marginBottom: 8 }}
         >
           <Building2 size={14} />
           <span className="truncate">{company}</span>
+        </div>
+        
+        <a
+          href="https://vrrobo-lp.vercel.app/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="sidebar-item"
+          style={{ fontSize: '0.8rem', color: 'var(--color-gray-600)', textDecoration: 'none', marginBottom: 4 }}
+        >
+          <Globe size={14} />
+          <span>vrrobo2025</span>
+        </a>
+
+        <div
+          className="sidebar-item"
+          style={{ fontSize: '0.8rem', color: 'var(--color-gray-600)', alignItems: 'flex-start', flexWrap: 'wrap' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, width: '100%', marginBottom: 8 }}>
+            <Heart size={14} color="#ef4444" />
+            <span>Donasi GoPay</span>
+          </div>
+          <div style={{ paddingLeft: 28, width: '100%' }}>
+            <div style={{ background: 'white', padding: 8, borderRadius: 8, border: '1px solid #e5e7eb', display: 'inline-block', marginBottom: 4 }}>
+              <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=628121105212" alt="GoPay QR" width={100} height={100} />
+            </div>
+            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#374151' }}>
+              +62 812-1105-212
+            </div>
+          </div>
         </div>
       </div>
     </aside>
