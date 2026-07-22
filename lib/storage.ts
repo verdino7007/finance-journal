@@ -149,8 +149,51 @@ export function saveJournal(journal: JournalEntry): void {
 }
 
 export function deleteJournal(id: string): void {
-  const journals = getItem<JournalEntry>(KEYS.JOURNALS).filter(j => j.id !== id);
-  setItem(KEYS.JOURNALS, journals);
+  const journals = getJournals();
+  setItem(KEYS.JOURNALS, journals.filter(j => j.id !== id));
+}
+
+// =====================
+// Backup & Restore
+// =====================
+
+export function exportData(): string {
+  if (!isClient()) return '';
+  const data: Record<string, any> = {};
+  Object.values(KEYS).forEach(key => {
+    const val = localStorage.getItem(key);
+    if (val) {
+      try {
+        data[key] = JSON.parse(val);
+      } catch (e) {
+        // ignore invalid json
+      }
+    }
+  });
+  return JSON.stringify(data, null, 2);
+}
+
+export function importData(jsonString: string): boolean {
+  if (!isClient()) return false;
+  try {
+    const data = JSON.parse(jsonString);
+    if (typeof data !== 'object' || !data) return false;
+    
+    // Validasi apakah ini file backup yang valid
+    const hasAnyKey = Object.values(KEYS).some(key => data[key] !== undefined);
+    if (!hasAnyKey) return false;
+
+    // Simpan semua data
+    Object.entries(data).forEach(([key, value]) => {
+      if (Object.values(KEYS).includes(key)) {
+        localStorage.setItem(key, JSON.stringify(value));
+      }
+    });
+    return true;
+  } catch (error) {
+    console.error('Failed to import data:', error);
+    return false;
+  }
 }
 
 // =====================

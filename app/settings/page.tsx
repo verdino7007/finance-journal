@@ -4,10 +4,11 @@ import { useEffect, useState } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
 import Header from '@/components/layout/Header';
 import Modal from '@/components/ui/Modal';
-import { Edit2, Plus, Trash2, Building2, User, Key, Save } from 'lucide-react';
+import { Edit2, Plus, Trash2, Building2, User, Key, Save, Database, Download, Upload } from 'lucide-react';
 import {
   getCompanies, saveCompany, deleteCompany, getUsers, saveUser,
   deleteUser, initializeApp, generateId, getSettings, setSettings,
+  exportData, importData
 } from '@/lib/storage';
 import { Company, User as UserType } from '@/lib/types';
 
@@ -19,7 +20,7 @@ export default function SettingsPage() {
   const [mounted, setMounted] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [users, setUsers] = useState<UserType[]>([]);
-  const [activeTab, setActiveTab] = useState<'company' | 'users'>('company');
+  const [activeTab, setActiveTab] = useState<'company' | 'users' | 'backup'>('company');
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [editCompany, setEditCompany] = useState<Company | null>(null);
   const [companyForm, setCompanyForm] = useState(emptyCompany);
@@ -101,6 +102,36 @@ export default function SettingsPage() {
     show('Pengguna berhasil disimpan');
   }
 
+  function handleExport() {
+    const data = exportData();
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `finance_journal_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    show('Data berhasil diekspor');
+  }
+
+  function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      if (importData(content)) {
+        loadData();
+        show('Data berhasil diimpor');
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        alert('Format file backup tidak valid');
+      }
+    };
+    reader.readAsText(file);
+  }
+
   if (!mounted) return null;
 
   const activeCompany = companies[0];
@@ -129,6 +160,7 @@ export default function SettingsPage() {
             {[
               { key: 'company', label: '🏢 Perusahaan', icon: Building2 },
               { key: 'users', label: '👤 Pengguna', icon: User },
+              { key: 'backup', label: '💾 Backup/Restore', icon: Database },
             ].map(tab => (
               <button
                 key={tab.key}
@@ -257,6 +289,42 @@ export default function SettingsPage() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Backup Tab */}
+          {activeTab === 'backup' && (
+            <div className="card card-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 600 }}>
+                <div>
+                  <h3 style={{ marginBottom: 8 }}>Export Data</h3>
+                  <p style={{ color: 'var(--color-gray-500)', fontSize: '0.875rem', marginBottom: 16 }}>
+                    Unduh semua data perusahaan, jurnal, akun, dan pengaturan ke dalam sebuah file JSON. File ini dapat Anda gunakan untuk mencadangkan data atau memindahkannya ke perangkat lain.
+                  </p>
+                  <button className="btn btn-primary" onClick={handleExport}>
+                    <Download size={16} /> Export Data ke JSON
+                  </button>
+                </div>
+
+                <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 24 }}>
+                  <h3 style={{ marginBottom: 8 }}>Import Data</h3>
+                  <p style={{ color: 'var(--color-gray-500)', fontSize: '0.875rem', marginBottom: 16 }}>
+                    Pulihkan data dari file JSON yang telah diekspor sebelumnya. 
+                    <strong style={{ color: 'var(--color-danger)' }}> Peringatan: Tindakan ini akan menimpa (overwrite) data lokal Anda yang ada saat ini jika kuncinya sama!</strong>
+                  </p>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <label className="btn btn-outline" style={{ cursor: 'pointer' }}>
+                      <Upload size={16} /> Pilih File JSON
+                      <input 
+                        type="file" 
+                        accept=".json" 
+                        style={{ display: 'none' }} 
+                        onChange={handleImport} 
+                      />
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>
