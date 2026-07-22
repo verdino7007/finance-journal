@@ -61,6 +61,17 @@ export default function SettingsPage() {
     show('Data perusahaan berhasil disimpan');
   }
 
+  function handleDeleteCompany(c: Company) {
+    if (window.confirm(`Apakah Anda yakin ingin menghapus perusahaan "${c.name}"?`)) {
+      deleteCompany(c.id);
+      if (getSettings()?.activeCompanyId === c.id) {
+        setSettings({ ...getSettings(), activeCompanyId: '' });
+      }
+      loadData();
+      show('Perusahaan berhasil dihapus');
+    }
+  }
+
   function show(msg: string) {
     setSavedMsg(msg);
     setTimeout(() => setSavedMsg(''), 3000);
@@ -175,9 +186,14 @@ export default function SettingsPage() {
                           </div>
                         </div>
                       </div>
-                      <button className="btn btn-outline btn-sm" onClick={() => openCompanyEdit(c)}>
-                        <Edit2 size={14} /> Edit
-                      </button>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button className="btn btn-outline btn-sm" onClick={() => openCompanyEdit(c)}>
+                          <Edit2 size={14} /> Edit
+                        </button>
+                        <button className="btn btn-outline btn-sm" style={{ color: 'var(--color-danger)', borderColor: 'var(--color-danger-light)' }} onClick={() => handleDeleteCompany(c)}>
+                          <Trash2 size={14} /> Hapus
+                        </button>
+                      </div>
                     </div>
                     <div className="form-grid">
                       {[
